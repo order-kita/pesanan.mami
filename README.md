@@ -9,3 +9,5 @@ Isi repo `masakan-mami`: `index.html`, `.nojekyll`, folder `assets/` (logo, favi
 5. Settings > Pages > Deploy from branch > main / root. Situs: https://USERNAME.github.io/masakan-mami/
 6. Setiap ubah kode Apps Script: Deploy > Manage deployments > Edit > New version.
 7. Agar respons cepat: Apps Script > Triggers > Add trigger > fungsi `ping`, Time-driven, setiap 5 menit.
+
+Catatan: URL Apps Script kini diisi di file `config.js` (bukan index.html). Saat memperbarui situs, cukup ganti index.html; config.js Anda tidak perlu diubah.

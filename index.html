@@ -1,5 +1,6 @@
 <!DOCTYPE html>
 <html lang="id"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><meta name="theme-color" content="#090909"><title>MASAKAN MAMI</title>
+<script src="config.js"></script>
 <link rel="icon" type="image/png" href="assets/favicon.png"><link rel="apple-touch-icon" href="assets/favicon.png">
 <script src="https://cdn.jsdelivr.net/npm/chart.js@4.4.1/dist/chart.umd.min.js"></script>
 <style>
@@ -26,7 +27,6 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:7px;borde
 @media print{body{background:#fff}.np,#side,#mt,#toast,.mod .btn{display:none!important}#main{padding:0}.card,.inv{box-shadow:none}.mod{position:static;background:none}.mod>.card{max-height:none;box-shadow:none}}
 </style></head><body><div id="app"></div><div id="toast"></div>
 <script>
-const GAS_URL='https://script.google.com/macros/s/AKfycbxC607VbKtd6Z2GhctvXTDogKehhD4VidcCPekkMcgd6-uCK1atHNaUwj0Hqs-EtGsl/exec'; // <-- ganti dengan URL Web App Apps Script (berakhiran /exec)
 const P=new URLSearchParams(location.search),BOOT={o:P.get('o')||'',t:P.get('t')||'',url:location.origin+location.pathname,settings:{}};let S=BOOT.settings||{},SESS=null,PRODS=[],charts=[];
 try{SESS=sessionStorage.getItem('mm_s')}catch(e){}
 const $=s=>document.querySelector(s),rp=n=>'Rp'+Number(n||0).toLocaleString('id-ID');
@@ -137,10 +137,10 @@ async function ordView(k,pid){OF={product:pid||'',size:10};PG=1;
 function readF(){const g=i=>($(i)?$(i).value:'');Object.assign(OF,{q:g('#fq'),from:g('#ff')||OF.from,to:g('#ft')||OF.to,status:g('#fs'),method:g('#fm')});if($('#fpr'))OF.product=g('#fpr')}
 async function table(sel,rd){if(rd)readF();const q={...OF,page:PG},key='tb_'+JSON.stringify(q),v=VIEW;if(MEM[key])drawTable(sel,MEM[key]);const R=await adm('getAdminOrders',q);MEM[key]=R;if(v===VIEW)drawTable(sel,R)}
 function drawTable(sel,R){if(!$(sel))return;LASTR=R;const pid=OF.product;
- $(sel).innerHTML=`<div class="card tw"><table><tr><th>No. Pesanan</th><th>Tanggal</th><th>Pelanggan</th><th>Produk</th><th>Jml</th><th>Harga</th><th>Total</th><th>Metode</th><th>Bayar</th><th>Status</th><th class="np">Aksi</th></tr>
- ${R.rows.map(o=>{const its=pid?o.items.filter(i=>i.product_id==pid):o.items;return `<tr><td>${esc(o.order_id)}</td><td>${esc(o.order_date)}</td><td>${esc(o.customer_name)}</td><td>${its.map(i=>esc(i.product_name)).join(', ')}</td><td>${its.map(i=>i.quantity).join(', ')}</td><td>${its.map(i=>rp(i.unit_price)).join(', ')}</td><td>${rp(pid?its.reduce((s,i)=>s+i.subtotal,0):o.total_amount)}</td><td>${esc(o.payment_method)}</td>
+ $(sel).innerHTML=`<div class="card tw"><table><tr><th>No. Pesanan</th><th>Tanggal</th><th>Pelanggan</th><th>Catatan</th><th>Produk</th><th>Jml</th><th>Harga</th><th>Total</th><th>Metode</th><th>Bayar</th><th>Status</th><th class="np">Aksi</th></tr>
+ ${R.rows.map(o=>{const its=pid?o.items.filter(i=>i.product_id==pid):o.items;return `<tr><td>${esc(o.order_id)}</td><td>${esc(o.order_date)}</td><td>${esc(o.customer_name)}</td><td>${esc(o.customer_note)}</td><td>${its.map(i=>esc(i.product_name)).join(', ')}</td><td>${its.map(i=>i.quantity).join(', ')}</td><td>${its.map(i=>rp(i.unit_price)).join(', ')}</td><td>${rp(pid?its.reduce((s,i)=>s+i.subtotal,0):o.total_amount)}</td><td>${esc(o.payment_method)}</td>
  <td><select class="np" onchange="pay('${o.order_id}',this.value)" ${o.order_status=='DIBATALKAN'?'disabled':''}>${['Belum Dibayar','Menunggu Konfirmasi','Sudah Dibayar','Perlu Pemeriksaan'].map(x=>`<option ${x==o.payment_status?'selected':''}>${x}</option>`).join('')}</select></td><td>${badge(o.order_status)}</td>
- <td class="np"><button class="btn s o" onclick="invoice('${o.order_id}','',false,true)">Detail/Invoice</button> ${o.order_status=='MENUNGGU'||o.order_status=='DIPROSES'?`<button class="btn s o" onclick="form('${o.order_id}')">Edit</button>${o.order_status=='MENUNGGU'?` <button class="btn s o" onclick="act('processOrder','${o.order_id}','Proses pesanan ini?')">Proses</button>`:''} <button class="btn s gr" onclick="act('completeOrder','${o.order_id}','Tandai pesanan SELESAI?')">Selesai</button> <button class="btn s r" onclick="act('cancelOrder','${o.order_id}','Batalkan pesanan ini?')">Batalkan</button>`:''}</td></tr>`}).join('')||'<tr><td colspan="11">Tidak ada data.</td></tr>'}</table></div>
+ <td class="np"><button class="btn s o" onclick="invoice('${o.order_id}','',false,true)">Detail/Invoice</button> ${o.order_status=='MENUNGGU'||o.order_status=='DIPROSES'?`<button class="btn s o" onclick="form('${o.order_id}')">Edit</button>${o.order_status=='MENUNGGU'?` <button class="btn s o" onclick="act('processOrder','${o.order_id}','Proses pesanan ini?')">Proses</button>`:''} <button class="btn s gr" onclick="act('completeOrder','${o.order_id}','Tandai pesanan SELESAI?')">Selesai</button> <button class="btn s r" onclick="act('cancelOrder','${o.order_id}','Batalkan pesanan ini?')">Batalkan</button>`:''}</td></tr>`}).join('')||'<tr><td colspan="12">Tidak ada data.</td></tr>'}</table></div>
  <div class="np" style="margin-top:8px">Total ${R.total} · Hal ${R.page} <button class="btn s o" ${PG<2?'disabled':''} onclick="PG--;table('${sel}')">‹</button> <button class="btn s o" ${PG*R.size>=R.total?'disabled':''} onclick="PG++;table('${sel}')">›</button></div>`}
 function inval(){Object.keys(MEM).forEach(k=>{if(/^(st|tb)_/.test(k))delete MEM[k]})}
 async function act(fn,id,msg){if(!confirm(msg))return;const to={processOrder:'DIPROSES',completeOrder:'SELESAI',cancelOrder:'DIBATALKAN'}[fn],R=LASTR,o=R&&R.rows.find(x=>x.order_id==id),old=o&&o.order_status;
@@ -148,7 +148,7 @@ async function act(fn,id,msg){if(!confirm(msg))return;const to={processOrder:'DI
  try{await adm(fn,id);toast('Berhasil.');inval();table('#tt')}catch(e){if(o){o.order_status=old;drawTable('#tt',R)}fail(e)}}
 async function pay(id,v){try{await adm('updatePaymentStatus',id,v);inval();toast('Pembayaran diperbarui.')}catch(e){fail(e);table('#tt')}}
 async function csv(){readF();const R=await adm('getAdminOrders',{...OF,size:5000,page:1}),q=v=>{v=String(v==null?'':v);if(/^[=+\-@]/.test(v))v="'"+v;return '"'+v.replace(/"/g,'""')+'"'};
- const L=[['No Pesanan','Tanggal','Pelanggan','Produk','Total','Metode','Pembayaran','Status']].concat(R.rows.map(o=>[o.order_id,o.order_date,o.customer_name,o.items.map(i=>i.product_name+' x'+i.quantity).join('; '),o.total_amount,o.payment_method,o.payment_status,o.order_status]));
+ const L=[['No Pesanan','Tanggal','Pelanggan','Catatan','Produk','Total','Metode','Pembayaran','Status']].concat(R.rows.map(o=>[o.order_id,o.order_date,o.customer_name,o.customer_note,o.items.map(i=>i.product_name+' x'+i.quantity).join('; '),o.total_amount,o.payment_method,o.payment_status,o.order_status]));
  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\ufeff'+L.map(r=>r.map(q).join(',')).join('\n')],{type:'text/csv'}));a.download='laporan-masakan-mami.csv';a.click()}
 async function form(id){let o={},items=[];if(id){const d=await adm('getAdminOrderDetail',id);o=d.order;items=d.items}CART={};items.forEach(i=>CART[i.product_id]=i.quantity);
  const m=document.createElement('div');m.className='mod';m.innerHTML=`<div class="card"><h3>${id?'Edit '+esc(id):'Pesanan Baru'}</h3><label>Nama</label><input id="an" value="${esc(o.customer_name)}"><label>WhatsApp</label><input id="aw" value="${esc(o.customer_whatsapp)}">
