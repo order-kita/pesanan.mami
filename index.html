@@ -83,7 +83,7 @@ function review(){const L=lines();const bad=L.find(l=>l.available==0);if(bad)ret
  const m=document.createElement('div');m.className='mod';m.innerHTML=`<div class="card"><h3>Ringkasan Pesanan</h3><table><tr><th>Produk</th><th>Qty</th><th>Harga</th><th>Subtotal</th></tr>${L.map(l=>`<tr><td>${esc(l.nm)}</td><td>${l.q}</td><td>${rp(l.unit)}</td><td>${rp(l.sub)}</td></tr>`).join('')}</table>
 <h3>Total ${L.reduce((s,l)=>s+l.q,0)} porsi · ${rp(L.reduce((s,l)=>s+l.sub,0))} · ${esc($('#cm').value)}</h3><p><small>Harga final diverifikasi server.</small></p><button class="btn o" onclick="this.closest('.mod').remove()">Kembali</button> <button class="btn" id="ok">Konfirmasi</button></div>`;
  document.body.appendChild(m);$('#ok').onclick=async function(){this.disabled=true;this.textContent='Menyimpan…';const d={customer_name:$('#cn').value,customer_whatsapp:$('#cw').value,order_date:$('#cd').value,customer_note:$('#cc').value,payment_method:$('#cm').value,items:L.map(l=>({product_id:l.product_id,variant:l.v,quantity:l.q})),request_key:KEY};
-  try{if(EDIT){const U=await api('updateCustomerOrder',EDIT.order.order_id,EDIT.token,d);m.remove();invoice(EDIT.order.order_id,EDIT.token,false,false,U)}else{const r=await api('createCustomerOrder',d);m.remove();invoice(r.order_id,r.token,true,false,r.invoice);api('kirimNotifPesanan',r.order_id,r.token).catch(()=>{})}}catch(e){fail(e);this.disabled=false;this.textContent='Konfirmasi'}}}
+  try{if(EDIT){const U=await api('updateCustomerOrder',EDIT.order.order_id,EDIT.token,d);m.remove();invoice(EDIT.order.order_id,EDIT.token,false,false,U)}else{const r=await api('createCustomerOrder',d);m.remove();invoice(r.order_id,r.token,true,false,r.invoice);if(r.notif===false)api('kirimNotifPesanan',r.order_id,r.token).catch(()=>{})}}catch(e){fail(e);this.disabled=false;this.textContent='Konfirmasi'}}}
 
 // ---------- INVOICE ----------
 async function invoice(id,token,fresh,isAdm,pre){if(!isAdm){PAGE='inv';$('#app').innerHTML=SK}let D=pre;if(!D)try{D=await api('generateInvoiceData',id,token,isAdm?SESS:null)}catch(e){fail(e);return home()}
@@ -107,7 +107,7 @@ function copyRek(n){const ok=()=>toast('Nomor rekening berhasil disalin.');(navi
 // ---------- LOGIN ----------
 function login(){$('#app').innerHTML=`<div class="dark" style="min-height:100vh;display:flex;align-items:center;justify-content:center"><div class="card dark" style="border:1px solid var(--g);width:340px;text-align:center">${logo('max-width:160px')}<h2 style="color:var(--g)">Login Admin</h2>
 <input id="lu" placeholder="Username" autocomplete="username"><br><br><input id="lp" type="password" placeholder="Password" autocomplete="current-password"><br><br><button class="btn" id="lb" style="width:100%">Masuk</button><br><br><a href="#" style="color:#aaa" onclick="home();return false">← Beranda</a></div></div>`;
- const go=async()=>{$('#lb').disabled=true;$('#lb').textContent='Memproses…';try{const r=await api('loginAdmin',$('#lu').value,$('#lp').value);SESS=r.token;try{sessionStorage.setItem('mm_s',SESS)}catch(e){}admin('dash')}catch(e){fail(e);$('#lb').disabled=false;$('#lb').textContent='Masuk'}};
+ const go=async()=>{$('#lb').disabled=true;$('#lb').textContent='Memproses…';try{const r=await api('loginAdmin',$('#lu').value,$('#lp').value,BOOT.url);SESS=r.token;try{sessionStorage.setItem('mm_s',SESS)}catch(e){}admin('dash')}catch(e){fail(e);$('#lb').disabled=false;$('#lb').textContent='Masuk'}};
  $('#lb').onclick=go;$('#lp').onkeydown=e=>{if(e.key=='Enter')go()}}
 
 // ---------- ADMIN ----------
