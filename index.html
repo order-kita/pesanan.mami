@@ -143,12 +143,15 @@ ${!pid&&D.perProduct?perTable(D.perProduct,D):''}<div class="grid"><div class="c
 let _t;function srch(){clearTimeout(_t);_t=setTimeout(()=>{PG=1;table('#tt',true)},350)}
 async function ordView(k,pid){OF={product:pid||'',size:10};PG=1;
  $('#c').innerHTML=`<div class="ttl">${k=='op'?esc(PNAME[pid]||pid):k=='rep'?'Laporan Penjualan':'Semua'}</div>
- <div class="bar np"><input id="fq" class="q" placeholder="Cari no. / nama" oninput="srch()"><span id="chips"></span><span style="margin-left:auto"></span><button class="btn s o" onclick="csv()">CSV</button><button class="btn s o" onclick="window.print()">Cetak</button></div>
+ <div class="bar np"><input id="fq" class="q" placeholder="Cari no. / nama" oninput="srch()"><span id="chips"></span><span style="margin-left:auto"></span><button class="btn s o" onclick="reload()" title="Muat ulang">↻</button><button class="btn s o" onclick="csv()">CSV</button><button class="btn s o" onclick="window.print()">Cetak</button></div>
  ${k=='rep'?'<div class="bar np"><input id="ff" type="date" class="q" onchange="srch()"><span>–</span><input id="ft" type="date" class="q" onchange="srch()"></div>':''}<div id="tt"></div>`;
  table('#tt',true)}
 function chips(R){const s=R.sum;if(!s||!s.byProduct)return '';return s.byProduct.map(x=>`<span class="tag" style="background:${x.qty?'#151515':'#aaa'};color:#F5B52E;margin:0 2px">${esc(x.name)} ${x.qty}</span>`).join('')}
 function readF(){const g=i=>($(i)?$(i).value:'');Object.assign(OF,{q:g('#fq'),from:g('#ff')||OF.from,to:g('#ft')||OF.to,status:g('#fs'),method:g('#fm')});if($('#fpr'))OF.product=g('#fpr')}
-async function table(sel,rd){if(rd)readF();const q={...OF,page:PG},key='tb_'+JSON.stringify(q),v=VIEW;if(MEM[key])drawTable(sel,MEM[key]);const R=await adm('getAdminOrders',q);MEM[key]=R;if(v===VIEW)drawTable(sel,R)}
+async function table(sel,rd){if(rd)readF();const q={...OF,page:PG},key='tb_'+JSON.stringify(q),v=VIEW;if(MEM[key])drawTable(sel,MEM[key]);
+ let R;try{R=await adm('getAdminOrders',q)}catch(e){if(v===VIEW&&$(sel)&&!MEM[key])$(sel).innerHTML='<div class="card">Gagal memuat data: '+esc(e&&e.message||'')+' <button class="btn s" onclick="table(\''+sel+'\',false)">Coba lagi</button></div>';fail(e);return}
+ MEM[key]=R;if(v===VIEW)drawTable(sel,R)}
+function reload(){OF.fresh=1;inval();table('#tt',false).then(()=>{delete OF.fresh})}
 function drawTable(sel,R){if(!$(sel))return;LASTR=R;const pid=OF.product;
  $(sel).innerHTML=`<div class="card tw"><table><tr><th>No. Pesanan</th><th>Tanggal</th><th>Pelanggan</th><th>Catatan</th><th>Produk</th><th>Jml</th><th>Harga</th><th>Total</th><th>Metode</th><th>Bayar</th><th>Status</th><th class="np">Aksi</th></tr>
  ${R.rows.map(o=>{const its=pid?o.items.filter(i=>i.product_id==pid):o.items;return `<tr><td>${esc(o.order_id)}</td><td>${esc(o.order_date)}</td><td>${esc(o.customer_name)}</td><td>${esc(o.customer_note)}</td><td>${its.map(i=>esc(i.product_name)).join(', ')}</td><td>${its.map(i=>i.quantity).join(', ')}${its.length>1?' = '+its.reduce((s,i)=>s+i.quantity,0):''}</td><td>${its.map(i=>rp(i.unit_price)).join(', ')}</td><td>${rp(pid?its.reduce((s,i)=>s+i.subtotal,0):o.total_amount)}</td><td>${esc(o.payment_method)}</td>
@@ -197,6 +200,7 @@ async function addP(){const n=$('#nn').value.trim(),pr=$('#np').value;if(!n)retu
 function setView(){const K=[['nama_usaha','Nama usaha'],['tagline','Tagline'],['logo_url','URL logo'],['favicon_url','URL favicon'],['bank','Bank'],['no_rekening','Nomor rekening'],['atas_nama','Atas nama']];
  $('#c').innerHTML=`<h2>Pengaturan Usaha</h2><div class="card">${K.map(k=>`<label>${k[1]}</label><input id="s_${k[0]}" value="${esc(S[k[0]])}">`).join('')}<br><button class="btn" onclick="saveS()">Simpan</button></div>`}
 async function saveS(){const o={};['nama_usaha','tagline','logo_url','favicon_url','bank','no_rekening','atas_nama'].forEach(k=>o[k]=$('#s_'+k).value);try{S=await adm('saveSettings',o);toast('Pengaturan disimpan.')}catch(e){fail(e)}}
+setInterval(()=>{try{if(document.hidden||!SESS||!/^(op|all|rep)/.test(VIEW)||document.querySelector('.mod')||(document.activeElement&&/SELECT|INPUT|TEXTAREA/.test(document.activeElement.tagName)))return;table('#tt',false)}catch(e){}},20000);
 if(!(window.google&&google.script))api('ping').catch(()=>{});
 init();
 </script></body></html>
