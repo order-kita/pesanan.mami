@@ -26,6 +26,7 @@ table{width:100%;border-collapse:collapse;font-size:13px}th,td{padding:7px;borde
 .desc{font-size:12px;color:#666;margin:4px 0}.pl{margin:4px 0}.pl span{font-size:13px}.ck{display:flex;gap:6px;align-items:center;margin:8px 0}.ck input{width:auto}.card.ready{border-top:4px solid var(--ok)}.card.off{background:#dcdcdc;border-top:4px solid var(--no)}.card.off .tag{background:var(--no)}
 #main{font-size:13px}#main h2,#main .ttl{font-size:15px;font-weight:700;margin:2px 0 6px}#main table{font-size:11.5px}#main th,#main td{padding:5px 6px}#main .btn{padding:7px 12px;font-size:12px}#main .btn.s{padding:3px 7px;font-size:11px}#main input,#main select,#main textarea{font-size:12px;padding:6px 8px}#main label{font-size:11px}#main .cards .card b{font-size:16px}#main .card{padding:12px}.bar{display:flex;gap:6px;align-items:center;flex-wrap:wrap;margin:6px 0}#main .bar .q{width:150px;flex:0 1 150px;padding:5px 8px}
 #main td{white-space:nowrap;vertical-align:middle;padding:3px 6px;line-height:1.25}#main th{white-space:nowrap;padding:5px 6px}#main td.wrap{white-space:normal;min-width:90px;max-width:170px}#main td.act .btn{margin:1px}#main td select{width:auto;padding:2px 4px;font-size:11px}
+.dates{display:flex;gap:6px;overflow-x:auto;padding:2px 0 6px;margin-bottom:2px}.dchip{flex:0 0 auto;border:1px solid #ccc;border-radius:99px;padding:5px 11px;font-size:12px;background:#fff;cursor:pointer;color:#222}.dchip.on{background:var(--g);border-color:var(--g);font-weight:700}.dchip small{background:var(--no);color:#fff;border-radius:99px;padding:0 6px;margin-left:5px;font-size:10px}.dchip.z small{background:#aaa}
 @media(max-width:760px){#side{position:fixed;inset:0 auto 0 0;z-index:8;transform:translateX(-100%);transition:.2s}#side.open{transform:none}#mt{display:inline-block}}
 @media print{body{background:#fff}.np,#side,#mt,#toast,.mod .btn{display:none!important}#main{padding:0}.card,.inv{box-shadow:none}.mod{position:static;background:none}.mod>.card{max-height:none;box-shadow:none}}
 </style></head><body><div id="app"></div><div id="toast"></div>
@@ -134,7 +135,7 @@ function adjSum(R,o,old,to){const s=R.sum;if(!s)return;const pid=OF.product,its=
  if(to=='DIHAPUS'){s.orders--;if(old=='SELESAI')s.done-=q;if(old!='DIBATALKAN'){s.qty-=q;s.amount-=amt;s.active--}}}
 async function del(id){if(!confirm('Hapus pesanan '+id+'? Data tetap tersimpan di spreadsheet (status DIHAPUS) tetapi tidak tampil lagi, dan nomornya tidak dipakai ulang.'))return;const R=LASTR,i=R?R.rows.findIndex(x=>x.order_id==id):-1,o=i>=0?R.rows[i]:null;
  if(o){adjSum(R,o,o.order_status,'DIHAPUS');R.rows.splice(i,1);R.total--;drawTable('#tt',R)}
- try{await adm('deleteOrder',id);toast('Pesanan dihapus.');inval();table('#tt')}catch(e){inval();table('#tt');fail(e)}}
+ try{await adm('deleteOrder',id);toast('Pesanan dihapus.');inval();table('#tt');if(DM)loadDates()}catch(e){inval();table('#tt');fail(e)}}
 function fsum(){let q=0,t=0;document.querySelectorAll('.mod [data-p]').forEach(i=>{const n=+i.value||0;q+=n;t+=n*(+i.dataset.pr)});const e=$('#fsum');if(e)e.textContent='Total: '+q+' porsi · '+rp(t)}
 function drawStat(pid,D){if(!$('#c'))return;charts.forEach(c=>c.destroy());charts=[];const B=D.byStatus,P=Object.values(D.products),ks=o=>Object.keys(o).sort();
  const C=(t,v)=>`<div class="card"><small>${t}</small><b>${v}</b></div>`;
@@ -145,14 +146,22 @@ ${!pid&&D.perProduct?perTable(D.perProduct,D):''}<div class="grid"><div class="c
  if(!pid){chart('g4','doughnut',P.map(p=>p.name),P.map(p=>p.revenue),'Perbandingan produk');chart('g5','bar',P.map(p=>p.name),P.map(p=>p.units),'Unit terjual')}
  if(pid){OF={product:pid,from:D.range[0],to:D.range[1]};$('#tb').innerHTML='<h3>Transaksi</h3><div id="tt"></div>';table('#tt',false)}}
 
+let DM=false,OD=[],SD='';
+const fd=d=>{const m=/^(\d{4})-(\d{2})-(\d{2})/.exec(String(d));return m?m[3]+'/'+m[2]+'/'+m[1].slice(2):d};
+function pickDefault(){const t=today();if(!SD||!OD.some(x=>x.date==SD))SD=(OD.find(x=>x.date==t)||OD.find(x=>x.pending>0)||OD[0]||{}).date||t;OF.from=SD;OF.to=SD}
+function drawDates(){const e=$('#dts');if(!e)return;e.innerHTML=OD.map(x=>`<button class="dchip ${x.date==SD?'on':''} ${x.pending?'':'z'}" onclick="pickDate('${esc(x.date)}')">${fd(x.date)}<small>${x.pending}</small></button>`).join('')||'<small>Belum ada pesanan.</small>'}
+async function loadDates(){const key='od_'+(OF.product||''),prev=SD;let D;try{D=await adm('getOrderDates',{product:OF.product})}catch(e){fail(e);return}
+ MEM[key]=D;OD=D;pickDefault();drawDates();if(SD!==prev&&prev)table('#tt',true)}
+function pickDate(d){SD=d;const f=$('#fq');if(f)f.value='';PG=1;drawDates();table('#tt',true)}
 let _t;function srch(){clearTimeout(_t);_t=setTimeout(()=>{PG=1;table('#tt',true)},350)}
-async function ordView(k,pid){OF={product:pid||'',size:10};PG=1;
- $('#c').innerHTML=`<div class="ttl">${k=='op'?esc(PNAME[pid]||pid):k=='rep'?'Laporan Penjualan':'Semua'}</div>
+async function ordView(k,pid){OF={product:pid||'',size:50};PG=1;DM=(k!='rep');SD='';
+ $('#c').innerHTML=`<div class="ttl">${k=='op'?esc(PNAME[pid]||pid):k=='rep'?'Laporan Penjualan':'Semua'}</div>${DM?'<div class="dates np" id="dts"><small>Memuat tanggal…</small></div>':''}
  <div class="bar np"><input id="fq" class="q" placeholder="Cari no. / nama" oninput="srch()"><span id="chips"></span><span style="margin-left:auto"></span><button class="btn s o" onclick="reload()" title="Muat ulang">↻</button><button class="btn s o" onclick="csv()">CSV</button><button class="btn s o" onclick="window.print()">Cetak</button></div>
  ${k=='rep'?'<div class="bar np"><input id="ff" type="date" class="q" onchange="srch()"><span>–</span><input id="ft" type="date" class="q" onchange="srch()"></div>':''}<div id="tt"></div>`;
+ if(DM){const key='od_'+(pid||'');if(MEM[key]){OD=MEM[key];pickDefault();drawDates();table('#tt',true);loadDates();return}await loadDates()}
  table('#tt',true)}
 function chips(R){const s=R.sum;if(!s||!s.byProduct)return '';return s.byProduct.map(x=>`<span class="tag" style="background:${x.qty?'#151515':'#aaa'};color:#F5B52E;margin:0 2px">${esc(x.name)} ${x.qty}</span>`).join('')}
-function readF(){const g=i=>($(i)?$(i).value:'');Object.assign(OF,{q:g('#fq'),from:g('#ff')||OF.from,to:g('#ft')||OF.to,status:g('#fs'),method:g('#fm')});if($('#fpr'))OF.product=g('#fpr')}
+function readF(){const g=i=>($(i)?$(i).value:'');Object.assign(OF,{q:g('#fq'),from:g('#ff')||OF.from,to:g('#ft')||OF.to,status:g('#fs'),method:g('#fm')});if($('#fpr'))OF.product=g('#fpr');if(DM&&SD){if(OF.q){delete OF.from;delete OF.to}else{OF.from=SD;OF.to=SD}}}
 async function table(sel,rd){if(rd)readF();const q={...OF,page:PG},key='tb_'+JSON.stringify(q),v=VIEW;if(MEM[key])drawTable(sel,MEM[key]);
  let R;try{R=await adm('getAdminOrders',q)}catch(e){if(v===VIEW&&$(sel)&&!MEM[key])$(sel).innerHTML='<div class="card">Gagal memuat data: '+esc(e&&e.message||'')+' <button class="btn s" onclick="table(\''+sel+'\',false)">Coba lagi</button></div>';fail(e);return}
  MEM[key]=R;if(v===VIEW)drawTable(sel,R)}
@@ -163,11 +172,11 @@ function drawTable(sel,R){if(!$(sel))return;LASTR=R;const pid=OF.product;
  <td><select class="np" onchange="pay('${o.order_id}',this.value)" ${o.order_status=='DIBATALKAN'?'disabled':''}>${['Belum Dibayar','Menunggu Konfirmasi','Sudah Dibayar','Perlu Pemeriksaan'].map(x=>`<option ${x==o.payment_status?'selected':''}>${x}</option>`).join('')}</select></td><td>${badge(o.order_status)}</td>
  <td class="np act"><button class="btn s o" onclick="invoice('${o.order_id}','',false,true)">Detail/Invoice</button> ${o.order_status=='MENUNGGU'||o.order_status=='DIPROSES'?`<button class="btn s o" onclick="form('${o.order_id}')">Edit</button>${o.order_status=='MENUNGGU'?` <button class="btn s o" onclick="act('processOrder','${o.order_id}','Proses pesanan ini?')">Proses</button>`:''} <button class="btn s gr" onclick="act('completeOrder','${o.order_id}','Tandai pesanan SELESAI?')">Selesai</button> <button class="btn s r" onclick="act('cancelOrder','${o.order_id}','Batalkan pesanan ini?')">Batalkan</button>`:''} <button class="btn s o" onclick="del('${o.order_id}')">Hapus</button></td></tr>`}).join('')||'<tr><td colspan="12">Tidak ada data.</td></tr>'}${R.sum?`<tr style="font-weight:700;background:#fff8e9"><td colspan="5">TOTAL ${R.sum.orders} pesanan (${R.sum.active} aktif)</td><td>${R.sum.qty}</td><td></td><td>${rp(R.sum.amount)}</td><td colspan="4"></td></tr>`:''}</table></div>
  <div class="np" style="margin-top:8px">Total ${R.total} · Hal ${R.page} <button class="btn s o" ${PG<2?'disabled':''} onclick="PG--;table('${sel}')">‹</button> <button class="btn s o" ${PG*R.size>=R.total?'disabled':''} onclick="PG++;table('${sel}')">›</button></div>`;const ch=$('#chips');if(ch)ch.innerHTML=chips(R)}
-function inval(){Object.keys(MEM).forEach(k=>{if(/^(st|tb)_/.test(k))delete MEM[k]})}
+function inval(){Object.keys(MEM).forEach(k=>{if(/^(st|tb|od)_/.test(k))delete MEM[k]})}
 async function act(fn,id,msg){if(!confirm(msg))return;const to={processOrder:'DIPROSES',completeOrder:'SELESAI',cancelOrder:'DIBATALKAN'}[fn],R=LASTR,o=R&&R.rows.find(x=>x.order_id==id),old=o&&o.order_status;
  if(o){adjSum(R,o,old,to);o.order_status=to;drawTable('#tt',R)}
- try{await adm(fn,id);toast('Berhasil.');inval();table('#tt')}catch(e){if(o){o.order_status=old;drawTable('#tt',R)}inval();table('#tt');fail(e)}}
-async function pay(id,v){try{await adm('updatePaymentStatus',id,v);inval();toast('Pembayaran diperbarui.')}catch(e){fail(e);table('#tt')}}
+ try{await adm(fn,id);toast('Berhasil.');inval();table('#tt');if(DM)loadDates()}catch(e){if(o){o.order_status=old;drawTable('#tt',R)}inval();table('#tt');fail(e)}}
+async function pay(id,v){try{await adm('updatePaymentStatus',id,v);inval();toast('Pembayaran diperbarui.');if(DM)loadDates()}catch(e){fail(e);table('#tt')}}
 async function csv(){readF();const R=await adm('getAdminOrders',{...OF,size:5000,page:1}),q=v=>{v=String(v==null?'':v);if(/^[=+\-@]/.test(v))v="'"+v;return '"'+v.replace(/"/g,'""')+'"'};
  const L=[['No Pesanan','Tanggal','Pelanggan','Catatan','Produk','Total','Metode','Pembayaran','Status']].concat(R.rows.map(o=>[o.order_id,o.order_date,o.customer_name,o.customer_note,o.items.map(i=>i.product_name+' x'+i.quantity).join('; '),o.total_amount,o.payment_method,o.payment_status,o.order_status]));
  const a=document.createElement('a');a.href=URL.createObjectURL(new Blob(['\ufeff'+L.map(r=>r.map(q).join(',')).join('\n')],{type:'text/csv'}));a.download='laporan-masakan-mami.csv';a.click()}
@@ -205,7 +214,7 @@ async function addP(){const n=$('#nn').value.trim(),pr=$('#np').value;if(!n)retu
 function setView(){const K=[['nama_usaha','Nama usaha'],['tagline','Tagline'],['logo_url','URL logo'],['favicon_url','URL favicon'],['bank','Bank'],['no_rekening','Nomor rekening'],['atas_nama','Atas nama']];
  $('#c').innerHTML=`<h2>Pengaturan Usaha</h2><div class="card">${K.map(k=>`<label>${k[1]}</label><input id="s_${k[0]}" value="${esc(S[k[0]])}">`).join('')}<br><button class="btn" onclick="saveS()">Simpan</button></div>`}
 async function saveS(){const o={};['nama_usaha','tagline','logo_url','favicon_url','bank','no_rekening','atas_nama'].forEach(k=>o[k]=$('#s_'+k).value);try{S=await adm('saveSettings',o);toast('Pengaturan disimpan.')}catch(e){fail(e)}}
-setInterval(()=>{try{if(document.hidden||!SESS||!/^(op|all|rep)/.test(VIEW)||document.querySelector('.mod')||(document.activeElement&&/SELECT|INPUT|TEXTAREA/.test(document.activeElement.tagName)))return;table('#tt',false)}catch(e){}},20000);
+setInterval(()=>{try{if(document.hidden||!SESS||!/^(op|all|rep)/.test(VIEW)||document.querySelector('.mod')||(document.activeElement&&/SELECT|INPUT|TEXTAREA/.test(document.activeElement.tagName)))return;table('#tt',false);if(DM)loadDates()}catch(e){}},20000);
 if(!(window.google&&google.script))api('ping').catch(()=>{});
 init();
 </script></body></html>
